@@ -260,7 +260,7 @@ clear what it's doing.
 
 For example, it currently can't do any ACME challenges besides dvsni. Maybe
 someone could do a pull request to add more challenge compatibility? Also, it
-currrently can't revoke certificates, and I don't want to include that in the
+currently can't revoke certificates, and I don't want to include that in the
 `sign_csr.py` script. Perhaps there should also be a `revoke_crt.py` script?
 
 

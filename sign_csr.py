@@ -79,7 +79,7 @@ Exponent\: ([0-9]+)\
     test_conf.write("\n\n[ alt_names ]\nsubjectAltName = DNS:" + sni + "\n")
     test_conf.flush()
 
-    #Step 5: Generate a self-signed ssl cert with the sni altname
+    #Step 6: Generate a self-signed ssl cert with the sni altname
     sys.stderr.write("Generating test key for dvsni challenge...\n")
     test_crt = tempfile.NamedTemporaryFile(dir=".", prefix="test_", suffix=".crt")
     test_crt_name = os.path.basename(test_crt.name)
@@ -95,7 +95,7 @@ Exponent\: ([0-9]+)\
     proc.wait()
     sys.stderr.write("Test key generated!\n")
 
-    #Step 6: Get ready to sign the challenge response
+    #Step 7: Get ready to sign the challenge response
     msgsig_nonce = os.urandom(16)
     msgsig_nonce64 = _b64(msgsig_nonce)
     msg = msgsig_nonce + domain + nonce
@@ -106,7 +106,7 @@ Exponent\: ([0-9]+)\
     msgsig_file = tempfile.NamedTemporaryFile(dir=".", prefix="test_", suffix=".msgsig")
     msgsig_file_name = os.path.basename(msgsig_file.name)
 
-    #Step 7: Get ready to sign the certificate request response
+    #Step 8: Get ready to sign the certificate request response
     dersig_nonce = os.urandom(16)
     dersig_nonce64 = _b64(dersig_nonce)
     proc = subprocess.Popen(["openssl", "req", "-in", csr, "-outform", "DER"],
@@ -120,7 +120,7 @@ Exponent\: ([0-9]+)\
     dersig_file = tempfile.NamedTemporaryFile(dir=".", prefix="test_", suffix=".dersig")
     dersig_file_name = os.path.basename(dersig_file.name)
 
-    #Step 8: Get the user to sign the request and start the https server
+    #Step 9: Get the user to sign the request and start the https server
     sys.stderr.write("""
 ====================================================
 ================USER ACTION REQUIRED================
@@ -173,12 +173,9 @@ ssh -t ubuntu@{} "sudo python -c \\"import BaseHTTPServer, ssl; \\
     raw_input("Press Enter when you've run the above commands in a new terminal window...")
     sys.stdout = stdout
 
-    #Step 9: Let the CA know you are ready for the challenge
+    #Step 10: Let the CA know you are ready for the challenge
     msgsig_file.seek(0)
     msgsig_in = msgsig_file.read()
-    f = open("test.sig", "wb")
-    f.write(msgsig_in)
-    f.close()
     msgsig64 = _b64(msgsig_in)
     sys.stderr.write("Sending challenge response...\n")
     data = json.dumps({
@@ -205,7 +202,7 @@ ssh -t ubuntu@{} "sudo python -c \\"import BaseHTTPServer, ssl; \\
     resp = urllib2.urlopen(CA, data)
     result = json.loads(resp.read())
 
-    #Step 10: Wait for the response giving authorization
+    #Step 11: Wait for the response giving authorization
     is_done = False
     while not is_done:
         if result['type'] == "defer":
@@ -221,7 +218,7 @@ ssh -t ubuntu@{} "sudo python -c \\"import BaseHTTPServer, ssl; \\
             sys.stderr.write("Sending certificate request...\n")
             is_done = True
 
-    #Step 11: Request the signed certificate
+    #Step 12: Request the signed certificate
     proc = subprocess.Popen(["openssl", "req", "-in", csr, "-outform", "DER"],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     csr_der, err = proc.communicate()
@@ -247,19 +244,23 @@ ssh -t ubuntu@{} "sudo python -c \\"import BaseHTTPServer, ssl; \\
     result = json.loads(resp.read())
     sys.stderr.write("Exporting signed certificate...\n")
 
-    #Step 12: Parse and output the signed certificate!
+    #Step 13: Parse the signed certificate
     crt_start = "-----BEGIN CERTIFICATE-----\n"
     crt_end = "\n-----END CERTIFICATE-----\n"
     crt64 = result['certificate']
     crt_pem = base64.b64encode(_a64(crt64))
     crt_pem = "\n".join(crt_pem[i:i+64] for i in xrange(0, len(crt_pem), 64))
     crt_pem = crt_start + crt_pem + crt_end
+
+    #Step 14: Parse any chained certificates
     for chain64 in result.get("chains", []):
         chain_pem = base64.b64encode(_a64(chain64))
         chain_pem = "\n".join(chain_pem[i:i+64] for i in xrange(0, len(chain_pem), 64))
         chain_pem = crt_start + chain_pem + crt_end
         crt_pem += chain_pem
     sys.stderr.write("Done! Your certificate is signed by the certificate authority!\n")
+
+    #Step 15: Output the chained, signed certificate!
     return crt_pem
 
 

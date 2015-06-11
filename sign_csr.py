@@ -204,11 +204,15 @@ TODO: apache and nginx configs showing how to do this.
     #Step 10: Get the certificate signed
     sys.stderr.write("Requesting signature...")
     csr_data = "{}.{}.{}".format(header64, csr_b64, csr_sig64)
-    print "csr_data", csr_data
-    resp = urllib2.urlopen("{}/new-cert".format(CA), csr_data)
-    result = json.loads(resp.read())
+    try:
+        resp = urllib2.urlopen("{}/new-cert".format(CA), csr_data)
+        result = json.loads(resp.read())
+        print "result", result
+    except Exception as e:
+        print "e", e
+        print "e.read()", e.read()
 
-    return crt_pem
+    return "TODO"
 
 
 if __name__ == "__main__":

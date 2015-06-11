@@ -91,7 +91,7 @@ Prerequisites:
 Example: Generate a key, create a csr, and have it signed.
 --------------
 $ openssl genrsa -out priv.key 4096
-$ openssl req -new -subj "/CN=example.com" -key priv.key -out cert.csr
+$ openssl req -new -subj "/CN=test4.byofs.com" -key priv.key -out cert.csr
 $ python sign_csr.py cert.csr > signed.crt
 --------------
 

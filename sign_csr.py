@@ -119,11 +119,11 @@ Exponent\: ([0-9]+)\
 
     #Step 3: Ask the user to sign the payloads
     sys.stderr.write("""
-STEP 1: You need to sign some files (replace 'acct.key' with your account private key).
+STEP 1: You need to sign some files (replace 'user.key' with your account private key).
 
-openssl dgst -sha256 -sign acct.key -out {} {}
-openssl dgst -sha256 -sign acct.key -out {} {}
-openssl dgst -sha256 -sign acct.key -out {} {}
+openssl dgst -sha256 -sign user.key -out {} {}
+openssl dgst -sha256 -sign user.key -out {} {}
+openssl dgst -sha256 -sign user.key -out {} {}
 
 """.format(
     reg_file_sig_name, reg_file_name,
@@ -252,9 +252,9 @@ sudo python -c "import BaseHTTPServer, ssl; \\
 
     #Step 10: Ask the user to sign the certificate request
     sys.stderr.write("""
-STEP 3: You need to sign one more file (replace 'acct.key' with your account private key).
+STEP 3: You need to sign one more file (replace 'user.key' with your account private key).
 
-openssl dgst -sha256 -sign acct.key -out {} {}
+openssl dgst -sha256 -sign user.key -out {} {}
 
 """.format(csr_file_sig_name, csr_file_name))
 
@@ -314,11 +314,11 @@ Prerequisites:
 
 Example: Generate an account keypair, a domain key and csr, and have the domain csr signed.
 --------------
-$ openssl genrsa -out acct.key 4096
-$ openssl rsa -in acct.key -pubout -out acct.pub
-$ openssl genrsa -out domain.key 4096
-$ openssl req -new -sha256 -subj "/CN=test1.byofs.com" -key domain.key -out domain.csr
-$ python sign_csr.py acct.pub domain.csr > signed.crt
+$ openssl genrsa 4096 > user.key
+$ openssl rsa -in user.key -pubout > user.pub
+$ openssl genrsa 4096 > domain.key
+$ openssl req -new -sha256 -key domain.key -subj "/CN=example.com" > domain.csr
+$ python sign_csr.py user.pub domain.csr > signed.crt
 --------------
 
 """)

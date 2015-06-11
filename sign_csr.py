@@ -11,7 +11,7 @@ def sign_csr(csr):
     :rtype: string
 
     """
-    CA = "https://letsencrypt-demo.org/"
+    CA = "https://www.letsencrypt-demo.org/acme"
     #CA = "http://localhost:8888/"
 
     def _b64(b):
@@ -28,7 +28,7 @@ def sign_csr(csr):
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
     domain, pub_hex, pub_exp = re.search("\
-Subject:.+? CN=([^\s,;/]+).+?\
+Subject:.*? CN=([^\s,;/]+).*?\
 Modulus\:\s+00:([a-f0-9\:\s]+?)\
 Exponent\: ([0-9]+)\
 ", out, re.MULTILINE|re.DOTALL).groups()
@@ -39,228 +39,175 @@ Exponent\: ([0-9]+)\
     pub_exp = "0{}".format(pub_exp) if len(pub_exp) % 2 else pub_exp
     pub_exp = binascii.unhexlify(pub_exp)
     pub_exp64 = _b64(pub_exp)
+    header = {
+        "alg": "RS256",
+        "jwk": {
+            "e": pub_exp64,
+            "kty": "RSA",
+            "n": pub_mod64,
+        },
+    }
+    header_json = json.dumps(header, sort_keys=True)
+    header64 = _b64(header_json)
     sys.stderr.write("Found domain '{}'\n".format(domain))
 
-    #Step 2: Get challenges from the CA
-    sys.stderr.write("Requesting challenges...")
-    data = json.dumps({
-        "type": "challengeRequest",
-        "identifier": domain,
-    })
-    resp = urllib2.urlopen(CA, data)
-    result = resp.read()
-    resp_json = json.loads(result)
-    sessionID = resp_json['sessionID']
-    nonce64 = resp_json['nonce']
-    nonce = _a64(nonce64)
-    challenges = resp_json['challenges']
-    sys.stderr.write("Challenges received!\n")
+    #Step 2: Generate the payloads that need to be signed
+    #registration
+    reg_raw = json.dumps({
+        "contact": ["mailto:webmaster@{}".format(domain)],
+        "agreement": "https://www.letsencrypt-demo.org/terms",
+    }, sort_keys=True)
+    reg_b64 = _b64(reg_raw)
+    reg_file = tempfile.NamedTemporaryFile(dir=".", prefix="letsencrypt_reg_", suffix=".json")
+    reg_file.write("{}.{}".format(header64, reg_b64))
+    reg_file.flush()
+    reg_file_name = os.path.basename(reg_file.name)
+    reg_file_sig = reg_file_name.replace(".json", ".sig")
 
-    #Step 3: Get the dvsni challenge
-    sys.stderr.write("Parsing dvsni challenge...\n")
-    challenge = [c for c in challenges if c['type'] == "dvsni"][0]
-    dvsni_nonce = binascii.unhexlify(challenge['nonce'])
-    dvsni_r = _a64(challenge['r'])
+    #identifier
+    id_raw = json.dumps({"identifier": {"type": "dns", "value": domain}}, sort_keys=True)
+    id_b64 = _b64(id_raw)
+    id_file = tempfile.NamedTemporaryFile(dir=".", prefix="letsencrypt_id_", suffix=".json")
+    id_file.write("{}.{}".format(header64, id_b64))
+    id_file.flush()
+    id_file_name = os.path.basename(id_file.name)
+    id_file_sig = id_file_name.replace(".json", ".sig")
 
-    #Step 4: Calculate the sni code
-    client_code = os.urandom(32)
-    sni_code = hashlib.sha256(dvsni_r + client_code).hexdigest()
-    sni = sni_code + ".acme.invalid"
+    #challenge
+    test_path = _b64(os.urandom(16))
+    test_raw = json.dumps({"type": "simpleHttps", "path": test_path}, sort_keys=True)
+    test_b64 = _b64(test_raw)
+    test_file = tempfile.NamedTemporaryFile(dir=".", prefix="letsencrypt_test_", suffix=".json")
+    test_file.write("{}.{}".format(header64, test_b64))
+    test_file.flush()
+    test_file_name = os.path.basename(test_file.name)
+    test_file_sig = test_file_name.replace(".json", ".sig")
 
-    #Step 5: Generate the OpenSSL configuration for the SNI challenge
-    sys.stderr.write("Generating test configuation...\n")
-    proc = subprocess.Popen(["openssl", "version", "-d"],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = proc.communicate()
-    openssl_dir = re.search("OPENSSLDIR: \"([^\"]+)\"", out).group(1)
-    openssl_cnf = open(os.path.join(openssl_dir, "openssl.cnf")).read()
-    test_conf = tempfile.NamedTemporaryFile(dir=".", prefix="test_", suffix=".cnf")
-    test_conf.write(openssl_cnf)
-    test_conf.write("\n\n[ alt_names ]\nsubjectAltName = DNS:" + sni + "\n")
-    test_conf.flush()
-
-    #Step 6: Generate a self-signed ssl cert with the sni altname
-    sys.stderr.write("Generating test key for dvsni challenge...\n")
-    test_crt = tempfile.NamedTemporaryFile(dir=".", prefix="test_", suffix=".crt")
-    test_crt_name = os.path.basename(test_crt.name)
-    test_pem = tempfile.NamedTemporaryFile(dir=".", prefix="test_", suffix=".pem")
-    test_pem_name = os.path.basename(test_pem.name)
-    proc = subprocess.Popen(
-        ["openssl", "req", "-new", "-newkey", "rsa:4096",
-        "-days", "365", "-nodes", "-x509", "-sha256",
-        "-subj", "/C=AA/ST=A/L=A/O=A/CN={}".format(domain),
-        "-config", test_conf.name, "-extensions", "alt_names",
-        "-keyout", test_pem.name, "-out", test_crt.name],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    proc.wait()
-    sys.stderr.write("Test key generated!\n")
-
-    #Step 7: Get ready to sign the challenge response
-    msgsig_nonce = os.urandom(16)
-    msgsig_nonce64 = _b64(msgsig_nonce)
-    msg = msgsig_nonce + domain + nonce
-    msg_file = tempfile.NamedTemporaryFile(dir=".", prefix="test_", suffix=".msg")
-    msg_file_name = os.path.basename(msg_file.name)
-    msg_file.write(msg)
-    msg_file.flush()
-    msgsig_file = tempfile.NamedTemporaryFile(dir=".", prefix="test_", suffix=".msgsig")
-    msgsig_file_name = os.path.basename(msgsig_file.name)
-
-    #Step 8: Get ready to sign the certificate request response
-    dersig_nonce = os.urandom(16)
-    dersig_nonce64 = _b64(dersig_nonce)
+    #certificate
     proc = subprocess.Popen(["openssl", "req", "-in", csr, "-outform", "DER"],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    der_raw, err = proc.communicate()
-    der = dersig_nonce + der_raw
-    der_file = tempfile.NamedTemporaryFile(dir=".", prefix="test_", suffix=".der")
-    der_file_name = os.path.basename(der_file.name)
-    der_file.write(der)
-    der_file.flush()
-    dersig_file = tempfile.NamedTemporaryFile(dir=".", prefix="test_", suffix=".dersig")
-    dersig_file_name = os.path.basename(dersig_file.name)
+    csr_der, err = proc.communicate()
+    csr_der64 = _b64(csr_der)
+    csr_raw = json.dumps({"csr": csr_der64}, sort_keys=True)
+    csr_b64 = _b64(csr_raw)
+    csr_file = tempfile.NamedTemporaryFile(dir=".", prefix="letsencrypt_csr_", suffix=".json")
+    csr_file.write("{}.{}".format(header64, csr_b64))
+    csr_file.flush()
+    csr_file_name = os.path.basename(csr_file.name)
+    csr_file_sig = csr_file_name.replace(".json", ".sig")
 
-    #Step 9: Get the user to sign the request and start the https server
+    #Step 3: Ask the user to sign the payloads
     sys.stderr.write("""
-====================================================
-================USER ACTION REQUIRED================
-====================================================
+==================================================
+================STEP 1: SIGN FILES================
+==================================================
 
 Since we don't ask for your private key or sudo access, you will need
 to do some manual commands in order to get a signed certificate. Here's
-what you need to do:
+the first set of commands (do them in a new terminal window).
 
-1. Sign some files requested by the certificate authority.
-2. Copy a test key and certificate to your server.
-3. Run an https server with the test key and certificate.
+1. Sign the four request files we've generated (commands below).
 
-We've listed the commands you need to do this below. You should be able
-to copy and paste them into a new terminal window.
+openssl dgst -sha256 -sign priv.key -out {} {}
+openssl dgst -sha256 -sign priv.key -out {} {}
+openssl dgst -sha256 -sign priv.key -out {} {}
+openssl dgst -sha256 -sign priv.key -out {} {}
 
 (NOTE: Replace 'priv.key' below with your private key, if different)
-(NOTE: Replace 'ubuntu' below with your sudo user, if different)
 
-COMMANDS:
---------------------------
-#Step 1: Sign the needed files
-openssl dgst -sha256 -sign priv.key -out {} {}
-openssl dgst -sha256 -sign priv.key -out {} {}
-
-#Step 2: Copy the test key and certificate to your server
-scp {} ubuntu@{}:{}
-scp {} ubuntu@{}:{}
-
-#Step 3: Run an https server with the test key and certificate
-ssh -t ubuntu@{} "sudo python -c \\"import BaseHTTPServer, ssl; \\
-  httpd = BaseHTTPServer.HTTPServer(('0.0.0.0', 443), BaseHTTPServer.BaseHTTPRequestHandler); \\
-  httpd.socket = ssl.wrap_socket(httpd.socket, keyfile='{}', certfile='{}'); \\
-  httpd.serve_forever()\\""
---------------------------
-
-====================================================
-====================================================
-====================================================
+==================================================
+==================================================
+==================================================
 
 """.format(
-    msgsig_file_name, msg_file_name,
-    dersig_file_name, der_file_name,
-    test_pem_name, domain, test_pem_name,
-    test_crt_name, domain, test_crt_name,
-    domain, test_pem_name, test_crt_name))
+    reg_file_sig, reg_file_name,
+    id_file_sig, id_file_name,
+    test_file_sig, test_file_name,
+    csr_file_sig, csr_file_name))
 
     stdout = sys.stdout
     sys.stdout = sys.stderr
     raw_input("Press Enter when you've run the above commands in a new terminal window...")
     sys.stdout = stdout
 
-    #Step 10: Let the CA know you are ready for the challenge
-    msgsig_file.seek(0)
-    msgsig_in = msgsig_file.read()
-    msgsig64 = _b64(msgsig_in)
-    sys.stderr.write("Sending challenge response...\n")
-    data = json.dumps({
-        "type": "authorizationRequest",
-        "sessionID": sessionID,
-        "nonce": nonce64,
-        "signature": {
-            "nonce": msgsig_nonce64,
-            "alg": "RS256",
-            "jwk": {
-                "kty": "RSA",
-                "e": pub_exp64,
-                "n": pub_mod64
-            },
-            "sig": msgsig64
-        },
-        "responses": [
-            {
-                "type": "dvsni",
-                "s": _b64(client_code)
-            }
-        ]
-    })
-    resp = urllib2.urlopen(CA, data)
+    #Step 4: Load the signatures
+    reg_sig64 = _b64(open(reg_file_sig).read())
+    id_sig64 = _b64(open(id_file_sig).read())
+    test_sig64 = _b64(open(test_file_sig).read())
+    csr_sig64 = _b64(open(csr_file_sig).read())
+
+    #Step 5: Register the user
+    sys.stderr.write("Registering...")
+    reg_data = "{}.{}.{}".format(header64, reg_b64, reg_sig64)
+    resp = urllib2.urlopen("{}/new-reg".format(CA), reg_data)
     result = json.loads(resp.read())
 
-    #Step 11: Wait for the response giving authorization
-    is_done = False
-    while not is_done:
-        if result['type'] == "defer":
-            sys.stderr.write("Deferred...\n")
-            time.sleep(result.get("interval", 3))
-            data = json.dumps({
-                "type": "statusRequest",
-                "token": result['token']
-            })
-            resp = urllib2.urlopen(CA, data)
-            result = json.loads(resp.read())
-        else:
-            sys.stderr.write("Sending certificate request...\n")
-            is_done = True
-
-    #Step 12: Request the signed certificate
-    proc = subprocess.Popen(["openssl", "req", "-in", csr, "-outform", "DER"],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    csr_der, err = proc.communicate()
-    csr_der64 = _b64(csr_der)
-    dersig_file.seek(0)
-    dersig = dersig_file.read()
-    dersig64 = _b64(dersig)
-    data = json.dumps({
-        "type": "certificateRequest",
-        "csr": csr_der64,
-        "signature": {
-            "alg": "RS256",
-            "nonce": dersig_nonce64,
-            "sig": dersig64,
-            "jwk": {
-                "kty": "RSA",
-                "e": pub_exp64,
-                "n": pub_mod64
-            }
-        }
-    })
-    resp = urllib2.urlopen(CA, data)
+    #Step 6: Get simpleHttps challenge token
+    sys.stderr.write("Requesting challenges...")
+    id_data = "{}.{}.{}".format(header64, id_b64, id_sig64)
+    resp = urllib2.urlopen("{}/new-authz".format(CA), id_data)
     result = json.loads(resp.read())
-    sys.stderr.write("Exporting signed certificate...\n")
+    token, uri = [[c['token'], c['uri']] for c in result['challenges'] if c['type'] == "simpleHttps"][0]
 
-    #Step 13: Parse the signed certificate
-    crt_start = "-----BEGIN CERTIFICATE-----\n"
-    crt_end = "\n-----END CERTIFICATE-----\n"
-    crt64 = result['certificate']
-    crt_pem = base64.b64encode(_a64(crt64))
-    crt_pem = "\n".join(crt_pem[i:i+64] for i in xrange(0, len(crt_pem), 64))
-    crt_pem = crt_start + crt_pem + crt_end
+    #Step 7: Ask the user to host the token on their server
+    sys.stderr.write("""
+=====================================================
+================STEP 2: VERIFY SERVER================
+=====================================================
 
-    #Step 14: Parse any chained certificates
-    for chain64 in result.get("chains", []):
-        chain_pem = base64.b64encode(_a64(chain64))
-        chain_pem = "\n".join(chain_pem[i:i+64] for i in xrange(0, len(chain_pem), 64))
-        chain_pem = crt_start + chain_pem + crt_end
-        crt_pem += chain_pem
-    sys.stderr.write("Done! Your certificate is signed by the certificate authority!\n")
+The certificate authority wants to verify you control the domain
+by serving a random string at a specific url.
 
-    #Step 15: Output the chained, signed certificate!
+Here's the commands (RUN THESE ANYWHERE ON YOUR SERVER):
+------------
+#Create a temporary self-signed cert
+openssl req -new -newkey rsa:2048 -days 365 -subj "/CN=a" -nodes -x509 -keyout a.key -out a.crt
+
+#Serve the token on port 443
+sudo python -c "import BaseHTTPServer, ssl; \\
+  h = BaseHTTPServer.BaseHTTPRequestHandler; \\
+  h.do_GET = lambda r: r.send_response(200) or r.end_headers() or r.wfile.write('{}'); \\
+  s = BaseHTTPServer.HTTPServer(('0.0.0.0', 443), h); \\
+  s.socket = ssl.wrap_socket(s.socket, keyfile='a.key', certfile='a.crt'); \\
+  s.serve_forever()"
+------------
+
+ALTERNATIVELY:
+If you are already serving content over https, you can add the
+token to your server config. A request to
+https://{}/.well-known/acme-challenge/{}
+should return the token "{}"
+as the body.
+TODO: apache and nginx configs showing how to do this.
+
+=====================================================
+=====================================================
+=====================================================
+
+""".format(token, domain, test_path, token))
+
+    stdout = sys.stdout
+    sys.stdout = sys.stderr
+    raw_input("Press Enter when you're serving the token on your server...")
+    sys.stdout = stdout
+
+    #Step 8: Let the CA know you're ready for the challenge
+    sys.stderr.write("Requesting verification...")
+    test_data = "{}.{}.{}".format(header64, test_b64, test_sig64)
+    resp = urllib2.urlopen(uri, test_data)
+    result = json.loads(resp.read())
+
+    #Step 9: Wait for a little while to let the challenge pass
+    sys.stderr.write("Waiting for verification...")
+    time.sleep(3)
+
+    #Step 10: Get the certificate signed
+    sys.stderr.write("Requesting signature...")
+    csr_data = "{}.{}.{}".format(header64, csr_b64, csr_sig64)
+    print "csr_data", csr_data
+    resp = urllib2.urlopen("{}/new-cert".format(CA), csr_data)
+    result = json.loads(resp.read())
+
     return crt_pem
 
 

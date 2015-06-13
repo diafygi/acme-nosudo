@@ -29,6 +29,8 @@ def sign_csr(pubkey, csr):
     proc = subprocess.Popen(["openssl", "rsa", "-pubin", "-in", pubkey, "-noout", "-text"],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
+    if proc.returncode != 0:
+        raise IOError("Error loading {}".format(pubkey))
     pub_hex, pub_exp = re.search("\
 Modulus\:\s+00:([a-f0-9\:\s]+?)\
 Exponent\: ([0-9]+)\
@@ -55,6 +57,8 @@ Exponent\: ([0-9]+)\
     proc = subprocess.Popen(["openssl", "req", "-in", csr, "-noout", "-text"],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
+    if proc.returncode != 0:
+        raise IOError("Error loading {}".format(csr))
     domain = re.search("Subject:.*? CN=([^\s,;/]+).*?", out, re.MULTILINE|re.DOTALL).groups()[0]
     sys.stderr.write("Found domain '{}'\n".format(domain))
 

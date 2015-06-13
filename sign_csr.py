@@ -146,7 +146,7 @@ openssl dgst -sha256 -sign user.key -out {} {}
     test_sig64 = _b64(test_file_sig.read())
 
     #Step 5: Register the user
-    sys.stderr.write("Registering {}...\n".format())
+    sys.stderr.write("Registering {}...\n".format(reg_email))
     reg_data = json.dumps({
         "header": header,
         "protected": reg_nonce64,

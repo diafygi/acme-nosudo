@@ -31,10 +31,7 @@ def sign_csr(pubkey, csr):
     out, err = proc.communicate()
     if proc.returncode != 0:
         raise IOError("Error loading {}".format(pubkey))
-    pub_hex, pub_exp = re.search("\
-Modulus\:\s+00:([a-f0-9\:\s]+?)\
-Exponent\: ([0-9]+)\
-", out, re.MULTILINE|re.DOTALL).groups()
+    pub_hex, pub_exp = re.search("Modulus\:\s+00:([a-f0-9\:\s]+?)Exponent\: ([0-9]+)", out, re.MULTILINE|re.DOTALL).groups()
     pub_mod = binascii.unhexlify(re.sub("(\s|:)", "", pub_hex))
     pub_mod64 = _b64(pub_mod)
     pub_exp = int(pub_exp)
@@ -64,8 +61,9 @@ Exponent\: ([0-9]+)\
 
     #Step 2: Generate the payloads that need to be signed
     #registration
+    reg_email = "webmaster@{}".format(domain)
     reg_raw = json.dumps({
-        "contact": ["mailto:webmaster@{}".format(domain)],
+        "contact": ["mailto:{}".format(reg_email)],
         "agreement": "https://www.letsencrypt-demo.org/terms",
     }, sort_keys=True, indent=4)
     reg_b64 = _b64(reg_raw)
@@ -123,7 +121,7 @@ Exponent\: ([0-9]+)\
 
     #Step 3: Ask the user to sign the payloads
     sys.stderr.write("""
-STEP 1: You need to sign some files (replace 'user.key' with your account private key).
+STEP 1: You need to sign some files (replace 'user.key' with your user private key).
 
 openssl dgst -sha256 -sign user.key -out {} {}
 openssl dgst -sha256 -sign user.key -out {} {}
@@ -148,7 +146,7 @@ openssl dgst -sha256 -sign user.key -out {} {}
     test_sig64 = _b64(test_file_sig.read())
 
     #Step 5: Register the user
-    sys.stderr.write("Registering...\n")
+    sys.stderr.write("Registering {}...\n".format())
     reg_data = json.dumps({
         "header": header,
         "protected": reg_nonce64,
@@ -162,7 +160,7 @@ openssl dgst -sha256 -sign user.key -out {} {}
         err = e.read()
         #skip already registered accounts
         if "Registration key is already in use" in err:
-            pass
+            sys.stderr.write("Already registered. Skipping...\n")
         else:
             sys.stderr.write("Error: reg_data:\n")
             sys.stderr.write(reg_data)
@@ -256,7 +254,7 @@ sudo python -c "import BaseHTTPServer, ssl; \\
 
     #Step 10: Ask the user to sign the certificate request
     sys.stderr.write("""
-STEP 3: You need to sign one more file (replace 'user.key' with your account private key).
+STEP 3: You need to sign one more file (replace 'user.key' with your user private key).
 
 openssl dgst -sha256 -sign user.key -out {} {}
 

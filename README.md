@@ -288,7 +288,7 @@ Here's a website that is using a certificate signed using `sign_csr.py`:
 ##Feedback/Contributing
 
 I'd love to receive feedback, issues, and pull requests to make this script
-better. The script itself, `sign_csr.py`, is less than 300 lines of code, so
+better. The script itself, `sign_csr.py`, is less than 400 lines of code, so
 feel free to read through it! I tried to comment things well and make it crystal
 clear what it's doing.
 

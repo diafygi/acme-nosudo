@@ -66,8 +66,13 @@ This is the key that you will get signed for free for your domain (replace
 and CSR for your domain, you can skip this step.
 
 ```sh
+#Create a CSR for example.com
 openssl genrsa 4096 > domain.key
 openssl req -new -sha256 -key domain.key -subj "/CN=example.com" > domain.csr
+
+#Alternatively, if you want both example.com and www.example.com
+openssl genrsa 4096 > domain.key
+openssl req -new -sha256 -key domain.key -subj "/" -reqexts SAN -config <(cat /etc/ssl/openssl.cnf <(printf "[SAN]\nsubjectAltName=DNS:example.com,DNS:www.example.com")) > domain.csr
 ```
 
 Third, you run the script using python and passing in the path to your user
@@ -150,34 +155,32 @@ user@hostname:~$ python sign_csr.py user.pub domain.csr > signed.crt
 Reading pubkey file...
 Found public key!
 Reading csr file...
-Found domain 'letsencrypt.daylightpirates.org'
+Found domains letsencrypt.daylightpirates.org
 
-STEP 1: You need to sign some files (replace 'user.key' with your account private key).
+STEP 1: You need to sign some files (replace 'user.key' with your user private key).
 
-openssl dgst -sha256 -sign user.key -out register_TeH8Cg.sig register_jzlzOk.json
-openssl dgst -sha256 -sign user.key -out domain_FOtDWV.sig domain_dkaWo7.json
-openssl dgst -sha256 -sign user.key -out challenge_IxfeES.sig challenge_svyiIw.json
+openssl dgst -sha256 -sign user.key -out register_TYtLJT.sig register_i3UGRo.json
+openssl dgst -sha256 -sign user.key -out domain_ZdDFx2.sig domain_F5CAvm.json
+openssl dgst -sha256 -sign user.key -out challenge_NF5S_I.sig challenge_ETkPkW.json
 
 Press Enter when you've run the above commands in a new terminal window...
-Registering...
-Requesting challenges...
+Registering webmaster@letsencrypt.daylightpirates.org...
+Requesting challenges for letsencrypt.daylightpirates.org...
 
-STEP 2: You need to run these two commands on letsencrypt.daylightpirates.org (don't stop the python command).
+STEP 2: You need to run these two commands on letsencrypt.daylightpirates.org (don't stop the python command until the next step).
 
-openssl req -new -newkey rsa:2048 -days 365 -subj "/CN=a" -nodes -x509 -keyout a.key -out a.crt
-sudo python -c "import BaseHTTPServer, ssl; \
+sudo python -c "import BaseHTTPServer; \
     h = BaseHTTPServer.BaseHTTPRequestHandler; \
-    h.do_GET = lambda r: r.send_response(200) or r.end_headers() or r.wfile.write('Zz7fkg1LAAxOomahwF5jP67ZJDFjQSkUDPAbLIMCtvY'); \
-    s = BaseHTTPServer.HTTPServer(('0.0.0.0', 443), h); \
-    s.socket = ssl.wrap_socket(s.socket, keyfile='a.key', certfile='a.crt'); \
+    h.do_GET = lambda r: r.send_response(200) or r.end_headers() or r.wfile.write('b636mznlTFh4wNaY2R6Px1nsKykhyGzC7siaO_Mf7zA'); \
+    s = BaseHTTPServer.HTTPServer(('0.0.0.0', 80), h); \
     s.serve_forever()"
 
 Press Enter when you've got the python command running on your server...
-Requesting verification...
+Requesting verification for letsencrypt.daylightpirates.org...
 
-STEP 3: You need to sign one more file (replace 'user.key' with your account private key).
+FINAL STEP: You need to sign one more file (replace 'user.key' with your user private key).
 
-openssl dgst -sha256 -sign user.key -out cert_97g7hU.sig cert_dDbKbs.json
+openssl dgst -sha256 -sign user.key -out cert_NWCQzv.sig cert_QQJGmK.json
 
 Press Enter when you've run the above command in a new terminal window...
 Requesting signature...
@@ -220,29 +223,22 @@ user@hostname:~$
 ###Manual Commands (the stuff the script asked you to do in a 2nd terminal)
 ```
 #first set of signed files
-user@hostname:~$ openssl dgst -sha256 -sign user.key -out register_TeH8Cg.sig register_jzlzOk.json
-user@hostname:~$ openssl dgst -sha256 -sign user.key -out domain_FOtDWV.sig domain_dkaWo7.json
-user@hostname:~$ openssl dgst -sha256 -sign user.key -out challenge_IxfeES.sig challenge_svyiIw.json
+user@hostname:~$ openssl dgst -sha256 -sign user.key -out register_TYtLJT.sig register_i3UGRo.json
+user@hostname:~$ openssl dgst -sha256 -sign user.key -out domain_ZdDFx2.sig domain_F5CAvm.json
+user@hostname:~$ openssl dgst -sha256 -sign user.key -out challenge_NF5S_I.sig challenge_ETkPkW.json
 user@hostname:~$
 
 #second set of signed files
-user@hostname:~$ openssl dgst -sha256 -sign user.key -out cert_97g7hU.sig cert_dDbKbs.json
+user@hostname:~$ openssl dgst -sha256 -sign user.key -out cert_NWCQzv.sig cert_QQJGmK.json
 user@hostname:~$
 ```
 
 ###Server Commands (the stuff the script asked you to do on your server)
 ```
-ubuntu@letsencrypt.daylightpirates.org:~$ openssl req -new -newkey rsa:2048 -days 365 -subj "/CN=a" -nodes -x509 -keyout a.key -out a.crt
-Generating a 2048 bit RSA private key
-........................+++
-.....+++
-writing new private key to 'a.key'
------
-ubuntu@letsencrypt.daylightpirates.org:~$ sudo python -c "import BaseHTTPServer, ssl; \
+ubuntu@letsencrypt.daylightpirates.org:~sudo python -c "import BaseHTTPServer; \
 >     h = BaseHTTPServer.BaseHTTPRequestHandler; \
->     h.do_GET = lambda r: r.send_response(200) or r.end_headers() or r.wfile.write('Zz7fkg1LAAxOomahwF5jP67ZJDFjQSkUDPAbLIMCtvY'); \
->     s = BaseHTTPServer.HTTPServer(('0.0.0.0', 443), h); \
->     s.socket = ssl.wrap_socket(s.socket, keyfile='a.key', certfile='a.crt'); \
+>     h.do_GET = lambda r: r.send_response(200) or r.end_headers() or r.wfile.write('b636mznlTFh4wNaY2R6Px1nsKykhyGzC7siaO_Mf7zA'); \
+>     s = BaseHTTPServer.HTTPServer(('0.0.0.0', 80), h); \
 >     s.serve_forever()"
 54.183.196.250 - - [11/Jun/2015 16:07:45] "GET /.well-known/acme-challenge/Abc46LNljZ5zjen6f-mcCA HTTP/1.1" 200 -
 ^CTraceback (most recent call last):
@@ -296,7 +292,7 @@ better. The script itself, `sign_csr.py`, is less than 300 lines of code, so
 feel free to read through it! I tried to comment things well and make it crystal
 clear what it's doing.
 
-For example, it currently can't do any ACME challenges besides SimpleHTTPS. Maybe
+For example, it currently can't do any ACME challenges besides SimpleHTTP. Maybe
 someone could do a pull request to add more challenge compatibility? Also, it
 currently can't revoke certificates, and I don't want to include that in the
 `sign_csr.py` script. Perhaps there should also be a `revoke_crt.py` script?

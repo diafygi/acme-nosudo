@@ -12,7 +12,8 @@ def sign_csr(pubkey, csr, email=None):
     :rtype: string
 
     """
-    CA = "https://acme-staging.api.letsencrypt.org"
+    #CA = "https://acme-staging.api.letsencrypt.org"
+    CA = "https://acme-v01.api.letsencrypt.org"
     TERMS = "https://letsencrypt.org/documents/LE-SA-v1.0.1-July-27-2015.pdf"
     nonce_req = urllib2.Request("{}/directory".format(CA))
     nonce_req.get_method = lambda : 'HEAD'
@@ -337,7 +338,28 @@ sudo python -c "import BaseHTTPServer; \\
             sys.stderr.write("\n")
             raise
 
-    # Step 13: Get the certificate signed
+        # Step 13: Wait for CA to mark test as valid
+        sys.stderr.write("Waiting for {} challenge to pass...\n".format(i['domain']))
+        while True:
+            try:
+                resp = urllib2.urlopen(responses[n]['uri'])
+                challenge_status = json.loads(resp.read())
+            except urllib2.HTTPError as e:
+                sys.stderr.write("Error: test_data:\n")
+                sys.stderr.write(test_data)
+                sys.stderr.write("\n")
+                sys.stderr.write(e.read())
+                sys.stderr.write("\n")
+                raise
+            if challenge_status['status'] == "pending":
+                time.sleep(2)
+            elif challenge_status['status'] == "valid":
+                sys.stderr.write("Passed {} challenge!\n".format(i['domain']))
+                break
+            else:
+                raise KeyError("'{}' challenge did not pass: {}".format(challenge_status))
+
+    # Step 14: Get the certificate signed
     sys.stderr.write("Requesting signature...\n")
     csr_file_sig.seek(0)
     csr_sig64 = _b64(csr_file_sig.read())
@@ -358,7 +380,7 @@ sudo python -c "import BaseHTTPServer; \\
         sys.stderr.write("\n")
         raise
 
-    # Step 14: Convert the signed cert from DER to PEM
+    # Step 15: Convert the signed cert from DER to PEM
     sys.stderr.write("Certificate signed!\n")
     sys.stderr.write("You can stop running the python command on your server (Ctrl+C works).\n")
     signed_der64 = base64.b64encode(signed_der)

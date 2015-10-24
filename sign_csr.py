@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import argparse, subprocess, json, os, urllib2, sys, base64, binascii, ssl, \
     hashlib, tempfile, re, time, copy, textwrap, copy
 
@@ -67,12 +68,21 @@ def sign_csr(pubkey, csr, email=None):
                 domains.add(san[4:])
     sys.stderr.write("Found domains {}\n".format(", ".join(domains)))
 
-    # Step 3: Generate the payloads that need to be signed
+    # Step 3: Ask user for contact email
+    if not email:
+        default_email = "webmaster@{}".format(min(domains, key=len))
+        stdout = sys.stdout
+        sys.stdout = sys.stderr
+        input_email = raw_input("STEP 1: What is your contact email? ({}) ".format(default_email))
+        email = input_email if input_email else default_email
+        sys.stdout = stdout
+
+    # Step 4: Generate the payloads that need to be signed
     # registration
-    reg_email = email if email else "webmaster@{}".format(min(domains, key=len))
+    sys.stderr.write("Building request payloads...\n")
     reg_raw = json.dumps({
         "resource": "new-reg",
-        "contact": ["mailto:{}".format(reg_email)],
+        "contact": ["mailto:{}".format(email)],
         "agreement": TERMS,
     }, sort_keys=True, indent=4)
     reg_b64 = _b64(reg_raw)
@@ -165,9 +175,9 @@ def sign_csr(pubkey, csr, email=None):
     csr_file_sig = tempfile.NamedTemporaryFile(dir=".", prefix="cert_", suffix=".sig")
     csr_file_sig_name = os.path.basename(csr_file_sig.name)
 
-    # Step 4: Ask the user to sign the registration and requests
+    # Step 5: Ask the user to sign the registration and requests
     sys.stderr.write("""\
-STEP 1: You need to sign some files (replace 'user.key' with your user private key).
+STEP 2: You need to sign some files (replace 'user.key' with your user private key).
 
 openssl dgst -sha256 -sign user.key -out {} {}
 {}
@@ -185,7 +195,7 @@ openssl dgst -sha256 -sign user.key -out {} {}
     raw_input("Press Enter when you've run the above commands in a new terminal window...")
     sys.stdout = stdout
 
-    # Step 5: Load the signatures
+    # Step 6: Load the signatures
     reg_file_sig.seek(0)
     reg_sig64 = _b64(reg_file_sig.read())
     for n, i in enumerate(ids):
@@ -194,8 +204,8 @@ openssl dgst -sha256 -sign user.key -out {} {}
         tests[n]['sig'].seek(0)
         tests[n]['sig64'] = _b64(tests[n]['sig'].read())
 
-    # Step 6: Register the user
-    sys.stderr.write("Registering {}...\n".format(reg_email))
+    # Step 7: Register the user
+    sys.stderr.write("Registering {}...\n".format(email))
     reg_data = json.dumps({
         "header": header,
         "protected": reg_protected64,
@@ -218,7 +228,7 @@ openssl dgst -sha256 -sign user.key -out {} {}
             sys.stderr.write("\n")
             raise
 
-    # Step 7: Request challenges for each domain
+    # Step 8: Request challenges for each domain
     responses = []
     for n, i in enumerate(ids):
         sys.stderr.write("Requesting challenges for {}...\n".format(i['domain']))
@@ -247,15 +257,16 @@ openssl dgst -sha256 -sign user.key -out {} {}
             "tls": False,
         }, sort_keys=True, indent=4)
         response_b64 = _b64(response_raw)
+        response_protected64 = _b64(json.dumps({"alg": "RS256"}))
         response_file = tempfile.NamedTemporaryFile(dir=".", prefix="response_", suffix=".json")
-        response_file.write(".{}".format(response_b64))
+        response_file.write("{}.{}".format(response_protected64, response_b64))
         response_file.flush()
         response_file_name = os.path.basename(response_file.name)
         response_file_sig = tempfile.NamedTemporaryFile(dir=".", prefix="response_", suffix=".sig")
         response_file_sig_name = os.path.basename(response_file_sig.name)
         responses.append({
             "uri": challenge['uri'],
-            "protected64": "",
+            "protected64": response_protected64,
             "data64": response_b64,
             "file": response_file,
             "file_name": response_file_name,
@@ -263,9 +274,9 @@ openssl dgst -sha256 -sign user.key -out {} {}
             "sig_name": response_file_sig_name,
         })
 
-    # Step 8: Ask the user to sign the challenge responses
+    # Step 9: Ask the user to sign the challenge responses
     sys.stderr.write("""\
-STEP 2: You need to sign some more files (replace 'user.key' with your user private key).
+STEP 3: You need to sign some more files (replace 'user.key' with your user private key).
 
 {}
 
@@ -278,14 +289,16 @@ STEP 2: You need to sign some more files (replace 'user.key' with your user priv
     raw_input("Press Enter when you've run the above commands in a new terminal window...")
     sys.stdout = stdout
 
-    # Step 9: Load the response signatures
+    # Step 10: Load the response signatures
     for n, i in enumerate(ids):
         responses[n]['sig'].seek(0)
         responses[n]['sig64'] = _b64(responses[n]['sig'].read())
 
-    # Step 10: Ask the user to host the token on their server
+    # Step 11: Ask the user to host the token on their server
     for n, i in enumerate(ids):
         response_payload = json.dumps({
+            "header": {"alg": "RS256"},
+            "protected": responses[n]['protected64'],
             "payload": responses[n]['data64'],
             "signature": responses[n]['sig64'],
         }).replace('"', '\\"')
@@ -298,14 +311,14 @@ sudo python -c "import BaseHTTPServer; \\
     s = BaseHTTPServer.HTTPServer(('0.0.0.0', 80), h); \\
     s.serve_forever()"
 
-""".format(n+3, i['domain'], response_payload))
+""".format(n+4, i['domain'], response_payload))
 
         stdout = sys.stdout
         sys.stdout = sys.stderr
         raw_input("Press Enter when you've got the python command running on your server...")
         sys.stdout = stdout
 
-        # Step 11: Let the CA know you're ready for the challenge
+        # Step 12: Let the CA know you're ready for the challenge
         sys.stderr.write("Requesting verification for {}...\n".format(i['domain']))
         test_data = json.dumps({
             "header": header,
@@ -324,7 +337,7 @@ sudo python -c "import BaseHTTPServer; \\
             sys.stderr.write("\n")
             raise
 
-    # Step 12: Get the certificate signed
+    # Step 13: Get the certificate signed
     sys.stderr.write("Requesting signature...\n")
     csr_file_sig.seek(0)
     csr_sig64 = _b64(csr_file_sig.read())
@@ -345,7 +358,7 @@ sudo python -c "import BaseHTTPServer; \\
         sys.stderr.write("\n")
         raise
 
-    # Step 13: Convert the signed cert from DER to PEM
+    # Step 14: Convert the signed cert from DER to PEM
     sys.stderr.write("Certificate signed!\n")
     sys.stderr.write("You can stop running the python command on your server (Ctrl+C works).\n")
     signed_der64 = base64.b64encode(signed_der)
@@ -379,15 +392,15 @@ $ openssl genrsa 4096 > user.key
 $ openssl rsa -in user.key -pubout > user.pub
 $ openssl genrsa 4096 > domain.key
 $ openssl req -new -sha256 -key domain.key -subj "/CN=example.com" > domain.csr
-$ python sign_csr.py user.pub domain.csr > signed.crt
+$ python sign_csr.py --public-key user.pub domain.csr > signed.crt
 --------------
 
 """)
-    parser.add_argument("pubkey_path", help="path to your account public key")
+    parser.add_argument("-p", "--public-key", required=True, help="path to your account public key")
+    parser.add_argument("-e", "--email", default=None, help="contact email, default is webmaster@<shortest_domain>")
     parser.add_argument("csr_path", help="path to your certificate signing request")
-    parser.add_argument("--email", default=None, help="contact email, default is webmaster@<shortest_domain>")
 
     args = parser.parse_args()
-    signed_crt = sign_csr(args.pubkey_path, args.csr_path, email=args.email)
+    signed_crt = sign_csr(args.public_key, args.csr_path, email=args.email)
     sys.stdout.write(signed_crt)
 

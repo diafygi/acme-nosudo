@@ -6,7 +6,10 @@ def sign_csr(pubkey, csr, email=None):
     """Use the ACME protocol to get an ssl certificate signed by a
     certificate authority.
 
+    :param string pubkey: Path to the user account public key.
     :param string csr: Path to the certificate signing request.
+    :param string email: An optional user account contact email
+                         (defaults to webmaster@<shortest_domain>)
 
     :returns: Signed Certificate (PEM format)
     :rtype: string
@@ -357,7 +360,7 @@ sudo python -c "import BaseHTTPServer; \\
                 sys.stderr.write("Passed {} challenge!\n".format(i['domain']))
                 break
             else:
-                raise KeyError("'{}' challenge did not pass: {}".format(i['domain'],challenge_status))
+                raise KeyError("'{}' challenge did not pass: {}".format(i['domain'], challenge_status))
 
     # Step 14: Get the certificate signed
     sys.stderr.write("Requesting signature...\n")

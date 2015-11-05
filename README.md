@@ -10,8 +10,8 @@ to run it on your your server as root, and it tries to edit your apache/nginx
 config files.
 
 I love the Let's Encrypt devs dearly, but there's no way I'm going to trust
-their script to run on my server as root and be able to edit my server configs.
-I'd just like the free ssl certificate, please.
+their script to run on my server as root, be able to edit my server configs, and
+have acces to my private keys. I'd just like the free ssl certificate, please.
 
 So I made a script that does that. You generate your private key and certificate
 signing request (CSR) like normal, then run `sign_csr.py` with your CSR to get
@@ -307,7 +307,7 @@ Here's a website that is using a certificate signed using `sign_csr.py`:
 ##Feedback/Contributing
 
 I'd love to receive feedback, issues, and pull requests to make this script
-better. The script itself, `sign_csr.py`, is less than 400 lines of code, so
+better. The script itself, `sign_csr.py`, is less than 500 lines of code, so
 feel free to read through it! I tried to comment things well and make it crystal
 clear what it's doing.
 

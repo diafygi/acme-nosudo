@@ -11,7 +11,7 @@ config files.
 
 I love the Let's Encrypt devs dearly, but there's no way I'm going to trust
 their script to run on my server as root, be able to edit my server configs, and
-have acces to my private keys. I'd just like the free ssl certificate, please.
+have access to my private keys. I'd just like the free ssl certificate, please.
 
 So I made a script that does that. You generate your private key and certificate
 signing request (CSR) like normal, then run `sign_csr.py` with your CSR to get

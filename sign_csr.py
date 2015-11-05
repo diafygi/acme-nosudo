@@ -357,7 +357,7 @@ sudo python -c "import BaseHTTPServer; \\
                 sys.stderr.write("Passed {} challenge!\n".format(i['domain']))
                 break
             else:
-                raise KeyError("'{}' challenge did not pass: {}".format(challenge_status))
+                raise KeyError("'{}' challenge did not pass: {}".format(i['domain'],challenge_status))
 
     # Step 14: Get the certificate signed
     sys.stderr.write("Requesting signature...\n")

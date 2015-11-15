@@ -5,7 +5,7 @@ import argparse, subprocess, json, os, urllib2, sys, base64, binascii, time, \
 
 def host_token(domain, token, response_payload, user_step_number, file_based):
     if file_based:
-        response_url = 'http://{}.well-known/acme-challenge/{}'.format(domain, token)
+        response_url = 'http://{}/.well-known/acme-challenge/{}'.format(domain, token)
 
         # tell the user where to put a file
         sys.stderr.write("""\

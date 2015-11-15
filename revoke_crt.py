@@ -71,10 +71,9 @@ def revoke_crt(pubkey, crt):
 
     # Step 3: Ask the user to sign the revocation request
     sys.stderr.write("""\
-STEP 1: You need to sign a file (replace 'auth.key' with your user private key¬      
-or the certificate private key).
+STEP 1: You need to sign a file (replace 'user.key' with your user private key)
 
-openssl dgst -sha256 -sign auth.key -out {} {}
+openssl dgst -sha256 -sign user.key -out {} {}
 
 """.format(crt_file_sig_name, crt_file_name))
 

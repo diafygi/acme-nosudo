@@ -381,10 +381,9 @@ user@hostname:~$
 user@hostname:~$ python revoke_crt.py --public-key user.pub domain.crt
 Reading pubkey file...
 Found public key!
-STEP 1: You need to sign a file (replace 'auth.key' with your user private key
-or the certificate private key).
+STEP 1: You need to sign a file (replace 'user.key' with your user private key)
 
-openssl dgst -sha256 -sign auth.key -out revoke_Z5Qxj3.sig revoke_TKSK9w.json
+openssl dgst -sha256 -sign user.key -out revoke_Z5Qxj3.sig revoke_TKSK9w.json
 
 Press Enter when you've run the above command in a new terminal window...
 Requesting revocation...

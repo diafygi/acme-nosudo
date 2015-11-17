@@ -7,6 +7,7 @@ def revoke_crt(pubkey, crt):
     """Use the ACME protocol to revoke an ssl certificate signed by a
     certificate authority.
 
+    :param string pubkey: Path to the user account public key.
     :param string crt: Path to the signed certificate.
     """
     #CA = "https://acme-staging.api.letsencrypt.org"
@@ -116,7 +117,7 @@ for your private keys. It will print out commands that you need to run with
 your private key, which gives you a chance to review the commands instead of
 trusting this script.
 
-NOTE: YOUR ACCOUNT KEY NEEDS TO BE THE SAME KEY USED TO ISSUE THE CERTIFICATE.
+NOTE: YOUR PUBLIC KEY NEEDS TO BE THE SAME KEY USED TO ISSUE THE CERTIFICATE.
 
 Prerequisites:
 * openssl

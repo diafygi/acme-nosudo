@@ -37,6 +37,7 @@ python https server that you can inspect for yourself before you run it.
 * Revocation script
     * [How to use the revocation script](#how-to-use-the-revocation-script)
     * [Example use of the revocation script](#example-use-of-the-revocation-script)
+* [Alternative: Official Let's Encrypt Client](#alternative--official-let-s-encrypt-client)
 * [Feedback/Contributing](#feedbackcontributing)
 
 ##Donate
@@ -397,6 +398,19 @@ user@hostname:~$
 user@hostname:~$ openssl dgst -sha256 -sign user.key -out revoke_Z5Qxj3.sig revoke_TKSK9w.json
 ```
 
+##Alternative: Official Let's Encrypt Client
+
+After I released this script, Let's Encrypt added a manual authenticator to
+allow the Let's Encrypt client to not have to be run on your server. Hooray!
+However, the Let's Encrypt client still has access to your user account private
+keys, so please be aware of that. Anyway, check out the comment on issue
+[#5](https://github.com/diafygi/letsencrypt-nosudo/issues/5#issuecomment-117283651)
+to see how to use the manual authenticator in the official Let's Encrypt client.
+
+```
+./letsencrypt-auto --email diafygi@gmail.com --text --authenticator manual --work-dir /tmp/work/ --config-dir /tmp/config/ --logs-dir /tmp/logs/ auth --cert-path /tmp/certs/ --chain-path /tmp/chains/ --csr ~/Desktop/domain.csr
+```
+
 ##Feedback/Contributing
 
 I'd love to receive feedback, issues, and pull requests to make this script
@@ -404,7 +418,7 @@ better. The script itself, `sign_csr.py`, is less than 500 lines of code, so
 feel free to read through it! I tried to comment things well and make it crystal
 clear what it's doing.
 
-For example, it currently can't do any ACME challenges besides SimpleHTTP. Maybe
+For example, it currently can't do any ACME challenges besides 'http-01'. Maybe
 someone could do a pull request to add more challenge compatibility?
 
 

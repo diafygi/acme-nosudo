@@ -2,7 +2,8 @@
 import argparse, subprocess, json, os, urllib2, sys, base64, binascii, time, \
     hashlib, tempfile, re, copy, textwrap
 
-def sign_csr(pubkey, csr, email=None):
+
+def sign_csr(pubkey, csr, email=None, file_based=False):
     """Use the ACME protocol to get an ssl certificate signed by a
     certificate authority.
 
@@ -10,6 +11,10 @@ def sign_csr(pubkey, csr, email=None):
     :param string csr: Path to the certificate signing request.
     :param string email: An optional user account contact email
                          (defaults to webmaster@<shortest_domain>)
+    :param bool file_based: An optional flag indicating that the
+                            hosting should be file-based rather
+                            than providing a simple python HTTP
+                            server.
 
     :returns: Signed Certificate (PEM format)
     :rtype: string
@@ -287,7 +292,27 @@ STEP 3: You need to sign some more files (replace 'user.key' with your user priv
 
     # Step 11: Ask the user to host the token on their server
     for n, i in enumerate(ids):
-        sys.stderr.write("""\
+        if file_based:
+            sys.stderr.write("""\
+STEP {}: Please update your server to serve the following file at this URL:
+
+--------------
+URL: http://{}/.well-known/acme-challenge/{}
+File contents: \"{}\"
+--------------
+
+Notes:
+- Do not include the quotes in the file.
+- The file should be one line without any spaces.
+
+""".format(n + 4, i['domain'], challenge['token'], responses[n]['data']))
+
+            stdout = sys.stdout
+            sys.stdout = sys.stderr
+            raw_input("Press Enter when you've got the file hosted on your server...")
+            sys.stdout = stdout
+        else:
+            sys.stderr.write("""\
 STEP {}: You need to run this command on {} (don't stop the python command until the next step).
 
 sudo python -c "import BaseHTTPServer; \\
@@ -296,12 +321,12 @@ sudo python -c "import BaseHTTPServer; \\
     s = BaseHTTPServer.HTTPServer(('0.0.0.0', 80), h); \\
     s.serve_forever()"
 
-""".format(n+4, i['domain'], responses[n]['data']))
+""".format(n + 4, i['domain'], responses[n]['data']))
 
-        stdout = sys.stdout
-        sys.stdout = sys.stderr
-        raw_input("Press Enter when you've got the python command running on your server...")
-        sys.stdout = stdout
+            stdout = sys.stdout
+            sys.stdout = sys.stderr
+            raw_input("Press Enter when you've got the python command running on your server...")
+            sys.stdout = stdout
 
         # Step 12: Let the CA know you're ready for the challenge
         sys.stderr.write("Requesting verification for {}...\n".format(i['domain']))
@@ -409,9 +434,10 @@ $ python sign_csr.py --public-key user.pub domain.csr > signed.crt
 """)
     parser.add_argument("-p", "--public-key", required=True, help="path to your account public key")
     parser.add_argument("-e", "--email", default=None, help="contact email, default is webmaster@<shortest_domain>")
+    parser.add_argument("-f", "--file-based", action='store_true', help="if set, a file-based response is used")
     parser.add_argument("csr_path", help="path to your certificate signing request")
 
     args = parser.parse_args()
-    signed_crt = sign_csr(args.public_key, args.csr_path, email=args.email)
+    signed_crt = sign_csr(args.public_key, args.csr_path, email=args.email, file_based=args.file_based)
     sys.stdout.write(signed_crt)
 

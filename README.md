@@ -137,6 +137,7 @@ optional arguments:
                         path to your account public key
   -e EMAIL, --email EMAIL
                         contact email, default is webmaster@<shortest_domain>
+  -f, --file-based      if set, a file-based response is used
 user@hostname:~$
 ```
 

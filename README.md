@@ -37,7 +37,7 @@ python https server that you can inspect for yourself before you run it.
 * Revocation script
     * [How to use the revocation script](#how-to-use-the-revocation-script)
     * [Example use of the revocation script](#example-use-of-the-revocation-script)
-* [Alternative: Official Let's Encrypt Client](#alternative--official-let-s-encrypt-client)
+* [Alternative: Official Let's Encrypt Client](#alternative-official-lets-encrypt-client)
 * [Feedback/Contributing](#feedbackcontributing)
 
 ##Donate

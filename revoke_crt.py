@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-import argparse, subprocess, json, os, urllib2, sys, base64, binascii, ssl, \
-    hashlib, tempfile, re, time, copy, textwrap, copy
+import argparse, subprocess, json, os, urllib2, sys, base64, binascii, copy, \
+    tempfile, re
 
 
 def revoke_crt(pubkey, crt):

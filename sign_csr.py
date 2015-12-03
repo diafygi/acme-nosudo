@@ -305,7 +305,7 @@ Notes:
 - Do not include the quotes in the file.
 - The file should be one line without any spaces.
 
-""".format(n + 4, i['domain'], challenge['token'], responses[n]['data']))
+""".format(n + 4, i['domain'], responses[n]['data'].split(".")[0], responses[n]['data']))
 
             stdout = sys.stdout
             sys.stdout = sys.stderr

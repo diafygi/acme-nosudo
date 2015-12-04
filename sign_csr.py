@@ -297,7 +297,7 @@ STEP 3: You need to sign some more files (replace 'user.key' with your user priv
 STEP {}: Please update your server to serve the following file at this URL:
 
 --------------
-URL: http://{}/.well-known/acme-challenge/{}
+URL: http://{}/{}
 File contents: \"{}\"
 --------------
 
@@ -305,7 +305,7 @@ Notes:
 - Do not include the quotes in the file.
 - The file should be one line without any spaces.
 
-""".format(n + 4, i['domain'], responses[n]['data'].split(".")[0], responses[n]['data']))
+""".format(n + 4, i['domain'], responses[n]['uri'], responses[n]['data']))
 
             stdout = sys.stdout
             sys.stdout = sys.stderr

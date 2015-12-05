@@ -23,7 +23,7 @@ def sign_csr(pubkey, csr, email=None, file_based=False):
     #CA = "https://acme-staging.api.letsencrypt.org"
     CA = "https://acme-v01.api.letsencrypt.org"
     TERMS = "https://letsencrypt.org/documents/LE-SA-v1.0.1-July-27-2015.pdf"
-    nonce_req = urllib2.Request("{}/directory".format(CA))
+    nonce_req = urllib2.Request("{0}/directory".format(CA))
     nonce_req.get_method = lambda : 'HEAD'
 
     def _b64(b):
@@ -36,7 +36,7 @@ def sign_csr(pubkey, csr, email=None, file_based=False):
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
     if proc.returncode != 0:
-        raise IOError("Error loading {}".format(pubkey))
+        raise IOError("Error loading {0}".format(pubkey))
     pub_hex, pub_exp = re.search(
         "Modulus(?: \((?:2048|4096) bit\)|)\:\s+00:([a-f0-9\:\s]+?)Exponent\: ([0-9]+)",
         out, re.MULTILINE|re.DOTALL).groups()
@@ -44,7 +44,7 @@ def sign_csr(pubkey, csr, email=None, file_based=False):
     pub_mod64 = _b64(pub_mod)
     pub_exp = int(pub_exp)
     pub_exp = "{0:x}".format(pub_exp)
-    pub_exp = "0{}".format(pub_exp) if len(pub_exp) % 2 else pub_exp
+    pub_exp = "0{0}".format(pub_exp) if len(pub_exp) % 2 else pub_exp
     pub_exp = binascii.unhexlify(pub_exp)
     pub_exp64 = _b64(pub_exp)
     header = {
@@ -65,7 +65,7 @@ def sign_csr(pubkey, csr, email=None, file_based=False):
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
     if proc.returncode != 0:
-        raise IOError("Error loading {}".format(csr))
+        raise IOError("Error loading {0}".format(csr))
     domains = set([])
     common_name = re.search("Subject:.*? CN=([^\s,;/]+)", out)
     if common_name is not None:
@@ -75,14 +75,14 @@ def sign_csr(pubkey, csr, email=None, file_based=False):
         for san in subject_alt_names.group(1).split(", "):
             if san.startswith("DNS:"):
                 domains.add(san[4:])
-    sys.stderr.write("Found domains {}\n".format(", ".join(domains)))
+    sys.stderr.write("Found domains {0}\n".format(", ".join(domains)))
 
     # Step 3: Ask user for contact email
     if not email:
-        default_email = "webmaster@{}".format(min(domains, key=len))
+        default_email = "webmaster@{0}".format(min(domains, key=len))
         stdout = sys.stdout
         sys.stdout = sys.stderr
-        input_email = raw_input("STEP 1: What is your contact email? ({}) ".format(default_email))
+        input_email = raw_input("STEP 1: What is your contact email? ({0}) ".format(default_email))
         email = input_email if input_email else default_email
         sys.stdout = stdout
 
@@ -92,7 +92,7 @@ def sign_csr(pubkey, csr, email=None, file_based=False):
     reg_nonce = urllib2.urlopen(nonce_req).headers['Replay-Nonce']
     reg_raw = json.dumps({
         "resource": "new-reg",
-        "contact": ["mailto:{}".format(email)],
+        "contact": ["mailto:{0}".format(email)],
         "agreement": TERMS,
     }, sort_keys=True, indent=4)
     reg_b64 = _b64(reg_raw)
@@ -100,7 +100,7 @@ def sign_csr(pubkey, csr, email=None, file_based=False):
     reg_protected.update({"nonce": reg_nonce})
     reg_protected64 = _b64(json.dumps(reg_protected, sort_keys=True, indent=4))
     reg_file = tempfile.NamedTemporaryFile(dir=".", prefix="register_", suffix=".json")
-    reg_file.write("{}.{}".format(reg_protected64, reg_b64))
+    reg_file.write("{0}.{1}".format(reg_protected64, reg_b64))
     reg_file.flush()
     reg_file_name = os.path.basename(reg_file.name)
     reg_file_sig = tempfile.NamedTemporaryFile(dir=".", prefix="register_", suffix=".sig")
@@ -109,7 +109,7 @@ def sign_csr(pubkey, csr, email=None, file_based=False):
     # need signature for each domain identifiers
     ids = []
     for domain in domains:
-        sys.stderr.write("Building request for {}...\n".format(domain))
+        sys.stderr.write("Building request for {0}...\n".format(domain))
         id_nonce = urllib2.urlopen(nonce_req).headers['Replay-Nonce']
         id_raw = json.dumps({
             "resource": "new-authz",
@@ -123,7 +123,7 @@ def sign_csr(pubkey, csr, email=None, file_based=False):
         id_protected.update({"nonce": id_nonce})
         id_protected64 = _b64(json.dumps(id_protected, sort_keys=True, indent=4))
         id_file = tempfile.NamedTemporaryFile(dir=".", prefix="domain_", suffix=".json")
-        id_file.write("{}.{}".format(id_protected64, id_b64))
+        id_file.write("{0}.{1}".format(id_protected64, id_b64))
         id_file.flush()
         id_file_name = os.path.basename(id_file.name)
         id_file_sig = tempfile.NamedTemporaryFile(dir=".", prefix="domain_", suffix=".sig")
@@ -154,7 +154,7 @@ def sign_csr(pubkey, csr, email=None, file_based=False):
     csr_protected.update({"nonce": csr_nonce})
     csr_protected64 = _b64(json.dumps(csr_protected, sort_keys=True, indent=4))
     csr_file = tempfile.NamedTemporaryFile(dir=".", prefix="cert_", suffix=".json")
-    csr_file.write("{}.{}".format(csr_protected64, csr_b64))
+    csr_file.write("{0}.{1}".format(csr_protected64, csr_b64))
     csr_file.flush()
     csr_file_name = os.path.basename(csr_file.name)
     csr_file_sig = tempfile.NamedTemporaryFile(dir=".", prefix="cert_", suffix=".sig")
@@ -164,13 +164,13 @@ def sign_csr(pubkey, csr, email=None, file_based=False):
     sys.stderr.write("""\
 STEP 2: You need to sign some files (replace 'user.key' with your user private key).
 
-openssl dgst -sha256 -sign user.key -out {} {}
-{}
-openssl dgst -sha256 -sign user.key -out {} {}
+openssl dgst -sha256 -sign user.key -out {0} {1}
+{2}
+openssl dgst -sha256 -sign user.key -out {3} {4}
 
 """.format(
     reg_file_sig_name, reg_file_name,
-    "\n".join("openssl dgst -sha256 -sign user.key -out {} {}".format(i['sig_name'], i['file_name']) for i in ids),
+    "\n".join("openssl dgst -sha256 -sign user.key -out {0} {1}".format(i['sig_name'], i['file_name']) for i in ids),
     csr_file_sig_name, csr_file_name))
 
     stdout = sys.stdout
@@ -186,14 +186,14 @@ openssl dgst -sha256 -sign user.key -out {} {}
         i['sig64'] = _b64(i['sig'].read())
 
     # Step 7: Register the user
-    sys.stderr.write("Registering {}...\n".format(email))
+    sys.stderr.write("Registering {0}...\n".format(email))
     reg_data = json.dumps({
         "header": header,
         "protected": reg_protected64,
         "payload": reg_b64,
         "signature": reg_sig64,
     }, sort_keys=True, indent=4)
-    reg_url = "{}/acme/new-reg".format(CA)
+    reg_url = "{0}/acme/new-reg".format(CA)
     try:
         resp = urllib2.urlopen(reg_url, reg_data)
         result = json.loads(resp.read())
@@ -204,7 +204,7 @@ openssl dgst -sha256 -sign user.key -out {} {}
             sys.stderr.write("Already registered. Skipping...\n")
         else:
             sys.stderr.write("Error: reg_data:\n")
-            sys.stderr.write("POST {}\n".format(reg_url))
+            sys.stderr.write("POST {0}\n".format(reg_url))
             sys.stderr.write(reg_data)
             sys.stderr.write("\n")
             sys.stderr.write(err)
@@ -215,30 +215,30 @@ openssl dgst -sha256 -sign user.key -out {} {}
     responses = []
     tests = []
     for n, i in enumerate(ids):
-        sys.stderr.write("Requesting challenges for {}...\n".format(i['domain']))
+        sys.stderr.write("Requesting challenges for {0}...\n".format(i['domain']))
         id_data = json.dumps({
             "header": header,
             "protected": i['protected64'],
             "payload": i['data64'],
             "signature": i['sig64'],
         }, sort_keys=True, indent=4)
-        id_url = "{}/acme/new-authz".format(CA)
+        id_url = "{0}/acme/new-authz".format(CA)
         try:
             resp = urllib2.urlopen(id_url, id_data)
             result = json.loads(resp.read())
         except urllib2.HTTPError as e:
             sys.stderr.write("Error: id_data:\n")
-            sys.stderr.write("POST {}\n".format(id_url))
+            sys.stderr.write("POST {0}\n".format(id_url))
             sys.stderr.write(id_data)
             sys.stderr.write("\n")
             sys.stderr.write(e.read())
             sys.stderr.write("\n")
             raise
         challenge = [c for c in result['challenges'] if c['type'] == "http-01"][0]
-        keyauthorization = "{}.{}".format(challenge['token'], thumbprint)
+        keyauthorization = "{0}.{1}".format(challenge['token'], thumbprint)
 
         # challenge request
-        sys.stderr.write("Building challenge responses for {}...\n".format(i['domain']))
+        sys.stderr.write("Building challenge responses for {0}...\n".format(i['domain']))
         test_nonce = urllib2.urlopen(nonce_req).headers['Replay-Nonce']
         test_raw = json.dumps({
             "resource": "challenge",
@@ -249,7 +249,7 @@ openssl dgst -sha256 -sign user.key -out {} {}
         test_protected.update({"nonce": test_nonce})
         test_protected64 = _b64(json.dumps(test_protected, sort_keys=True, indent=4))
         test_file = tempfile.NamedTemporaryFile(dir=".", prefix="challenge_", suffix=".json")
-        test_file.write("{}.{}".format(test_protected64, test_b64))
+        test_file.write("{0}.{1}".format(test_protected64, test_b64))
         test_file.flush()
         test_file_name = os.path.basename(test_file.name)
         test_file_sig = tempfile.NamedTemporaryFile(dir=".", prefix="challenge_", suffix=".sig")
@@ -266,7 +266,7 @@ openssl dgst -sha256 -sign user.key -out {} {}
 
         # challenge response for server
         responses.append({
-            "uri": ".well-known/acme-challenge/{}".format(challenge['token']),
+            "uri": ".well-known/acme-challenge/{0}".format(challenge['token']),
             "data": keyauthorization,
         })
 
@@ -274,10 +274,10 @@ openssl dgst -sha256 -sign user.key -out {} {}
     sys.stderr.write("""\
 STEP 3: You need to sign some more files (replace 'user.key' with your user private key).
 
-{}
+{0}
 
 """.format(
-    "\n".join("openssl dgst -sha256 -sign user.key -out {} {}".format(
+    "\n".join("openssl dgst -sha256 -sign user.key -out {0} {1}".format(
         i['sig_name'], i['file_name']) for i in tests)))
 
     stdout = sys.stdout
@@ -294,11 +294,11 @@ STEP 3: You need to sign some more files (replace 'user.key' with your user priv
     for n, i in enumerate(ids):
         if file_based:
             sys.stderr.write("""\
-STEP {}: Please update your server to serve the following file at this URL:
+STEP {0}: Please update your server to serve the following file at this URL:
 
 --------------
-URL: http://{}/{}
-File contents: \"{}\"
+URL: http://{1}/{2}
+File contents: \"{3}\"
 --------------
 
 Notes:
@@ -313,11 +313,11 @@ Notes:
             sys.stdout = stdout
         else:
             sys.stderr.write("""\
-STEP {}: You need to run this command on {} (don't stop the python command until the next step).
+STEP {0}: You need to run this command on {1} (don't stop the python command until the next step).
 
 sudo python -c "import BaseHTTPServer; \\
     h = BaseHTTPServer.BaseHTTPRequestHandler; \\
-    h.do_GET = lambda r: r.send_response(200) or r.end_headers() or r.wfile.write('{}'); \\
+    h.do_GET = lambda r: r.send_response(200) or r.end_headers() or r.wfile.write('{2}'); \\
     s = BaseHTTPServer.HTTPServer(('0.0.0.0', 80), h); \\
     s.serve_forever()"
 
@@ -329,7 +329,7 @@ sudo python -c "import BaseHTTPServer; \\
             sys.stdout = stdout
 
         # Step 12: Let the CA know you're ready for the challenge
-        sys.stderr.write("Requesting verification for {}...\n".format(i['domain']))
+        sys.stderr.write("Requesting verification for {0}...\n".format(i['domain']))
         test_data = json.dumps({
             "header": header,
             "protected": tests[n]['protected64'],
@@ -342,7 +342,7 @@ sudo python -c "import BaseHTTPServer; \\
             test_result = json.loads(resp.read())
         except urllib2.HTTPError as e:
             sys.stderr.write("Error: test_data:\n")
-            sys.stderr.write("POST {}\n".format(test_url))
+            sys.stderr.write("POST {0}\n".format(test_url))
             sys.stderr.write(test_data)
             sys.stderr.write("\n")
             sys.stderr.write(e.read())
@@ -350,14 +350,14 @@ sudo python -c "import BaseHTTPServer; \\
             raise
 
         # Step 13: Wait for CA to mark test as valid
-        sys.stderr.write("Waiting for {} challenge to pass...\n".format(i['domain']))
+        sys.stderr.write("Waiting for {0} challenge to pass...\n".format(i['domain']))
         while True:
             try:
                 resp = urllib2.urlopen(test_url)
                 challenge_status = json.loads(resp.read())
             except urllib2.HTTPError as e:
                 sys.stderr.write("Error: test_data:\n")
-                sys.stderr.write("GET {}\n".format(test_url))
+                sys.stderr.write("GET {0}\n".format(test_url))
                 sys.stderr.write(test_data)
                 sys.stderr.write("\n")
                 sys.stderr.write(e.read())
@@ -366,10 +366,10 @@ sudo python -c "import BaseHTTPServer; \\
             if challenge_status['status'] == "pending":
                 time.sleep(2)
             elif challenge_status['status'] == "valid":
-                sys.stderr.write("Passed {} challenge!\n".format(i['domain']))
+                sys.stderr.write("Passed {0} challenge!\n".format(i['domain']))
                 break
             else:
-                raise KeyError("'{}' challenge did not pass: {}".format(i['domain'], challenge_status))
+                raise KeyError("'{0}' challenge did not pass: {1}".format(i['domain'], challenge_status))
 
     # Step 14: Get the certificate signed
     sys.stderr.write("Requesting signature...\n")
@@ -381,13 +381,13 @@ sudo python -c "import BaseHTTPServer; \\
         "payload": csr_b64,
         "signature": csr_sig64,
     }, sort_keys=True, indent=4)
-    csr_url = "{}/acme/new-cert".format(CA)
+    csr_url = "{0}/acme/new-cert".format(CA)
     try:
         resp = urllib2.urlopen(csr_url, csr_data)
         signed_der = resp.read()
     except urllib2.HTTPError as e:
         sys.stderr.write("Error: csr_data:\n")
-        sys.stderr.write("POST {}\n".format(csr_url))
+        sys.stderr.write("POST {0}\n".format(csr_url))
         sys.stderr.write(csr_data)
         sys.stderr.write("\n")
         sys.stderr.write(e.read())
@@ -400,7 +400,7 @@ sudo python -c "import BaseHTTPServer; \\
     signed_der64 = base64.b64encode(signed_der)
     signed_pem = """\
 -----BEGIN CERTIFICATE-----
-{}
+{0}
 -----END CERTIFICATE-----
 """.format("\n".join(textwrap.wrap(signed_der64, 64)))
 

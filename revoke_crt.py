@@ -13,7 +13,7 @@ def revoke_crt(pubkey, crt):
     #CA = "https://acme-staging.api.letsencrypt.org"
     CA = "https://acme-v01.api.letsencrypt.org"
     TERMS = "https://letsencrypt.org/documents/LE-SA-v1.0.1-July-27-2015.pdf"
-    nonce_req = urllib2.Request("{}/directory".format(CA))
+    nonce_req = urllib2.Request("{0}/directory".format(CA))
     nonce_req.get_method = lambda : 'HEAD'
 
     def _b64(b):
@@ -30,13 +30,13 @@ def revoke_crt(pubkey, crt):
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
     if proc.returncode != 0:
-        raise IOError("Error loading {}".format(pubkey))
+        raise IOError("Error loading {0}".format(pubkey))
     pub_hex, pub_exp = re.search("Modulus\:\s+00:([a-f0-9\:\s]+?)Exponent\: ([0-9]+)", out, re.MULTILINE|re.DOTALL).groups()
     pub_mod = binascii.unhexlify(re.sub("(\s|:)", "", pub_hex))
     pub_mod64 = _b64(pub_mod)
     pub_exp = int(pub_exp)
     pub_exp = "{0:x}".format(pub_exp)
-    pub_exp = "0{}".format(pub_exp) if len(pub_exp) % 2 else pub_exp
+    pub_exp = "0{0}".format(pub_exp) if len(pub_exp) % 2 else pub_exp
     pub_exp = binascii.unhexlify(pub_exp)
     pub_exp64 = _b64(pub_exp)
     header = {
@@ -64,7 +64,7 @@ def revoke_crt(pubkey, crt):
     crt_protected.update({"nonce": urllib2.urlopen(nonce_req).headers['Replay-Nonce']})
     crt_protected64 = _b64(json.dumps(crt_protected, sort_keys=True, indent=4))
     crt_file = tempfile.NamedTemporaryFile(dir=".", prefix="revoke_", suffix=".json")
-    crt_file.write("{}.{}".format(crt_protected64, crt_b64))
+    crt_file.write("{0}.{1}".format(crt_protected64, crt_b64))
     crt_file.flush()
     crt_file_name = os.path.basename(crt_file.name)
     crt_file_sig = tempfile.NamedTemporaryFile(dir=".", prefix="revoke_", suffix=".sig")
@@ -74,7 +74,7 @@ def revoke_crt(pubkey, crt):
     sys.stderr.write("""\
 STEP 1: You need to sign a file (replace 'user.key' with your user private key)
 
-openssl dgst -sha256 -sign user.key -out {} {}
+openssl dgst -sha256 -sign user.key -out {0} {1}
 
 """.format(crt_file_sig_name, crt_file_name))
 
@@ -94,7 +94,7 @@ openssl dgst -sha256 -sign user.key -out {} {}
         "signature": crt_sig64,
     }, sort_keys=True, indent=4)
     try:
-        resp = urllib2.urlopen("{}/acme/revoke-cert".format(CA), crt_data)
+        resp = urllib2.urlopen("{0}/acme/revoke-cert".format(CA), crt_data)
         signed_der = resp.read()
     except urllib2.HTTPError as e:
         sys.stderr.write("Error: crt_data:\n")

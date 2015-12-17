@@ -396,7 +396,12 @@ sudo python -c "import BaseHTTPServer; \\
 
     # Step 15: Convert the signed cert from DER to PEM
     sys.stderr.write("Certificate signed!\n")
-    sys.stderr.write("You can stop running the python command on your server (Ctrl+C works).\n")
+
+    if file_based:
+        sys.stderr.write("You can remove the acme-challenge file from your webserver now.\n")
+    else:
+        sys.stderr.write("You can stop running the python command on your server (Ctrl+C works).\n")
+
     signed_der64 = base64.b64encode(signed_der)
     signed_pem = """\
 -----BEGIN CERTIFICATE-----

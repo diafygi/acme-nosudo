@@ -79,6 +79,8 @@ openssl req -new -sha256 -key domain.key -subj "/" -reqexts SAN -config <(cat /e
 
 Third, you run the script using python and passing in the path to your user
 account public key and the domain CSR. The paths can be relative or absolute.
+By default the script will ask you to start a webserver on port 80.  If you
+already have one, use the `--file-based` option instead.
 
 ```sh
 python sign_csr.py --public-key user.pub domain.csr > signed.crt

@@ -271,7 +271,7 @@ ubuntu@letsencrypt.daylightpirates.org:~$
 ##How to use the signed https certificate
 
 The signed https certificate that is output by this script can be used along
-with your private key to run an https server. You just security transfer (using
+with your private key to run an https server. You just securely transfer (using
 `scp` or similar) the private key and signed certificate to your server, then
 include them in the https settings in your web server's configuration. Here's an
 example on how to configure an nginx server:

@@ -278,8 +278,8 @@ example on how to configure an nginx server:
 
 ```
 #NOTE: For nginx, you need to append the Let's Encrypt intermediate cert to your cert
-user@hostname:~$ wget https://letsencrypt.org/certs/lets-encrypt-x1-cross-signed.pem
-user@hostname:~$ cat signed.crt lets-encrypt-x1-cross-signed.pem > chained.pem
+user@hostname:~$ wget https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem
+user@hostname:~$ cat signed.crt lets-encrypt-x3-cross-signed.pem > chained.pem
 ```
 
 ```nginx

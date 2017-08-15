@@ -1,4 +1,4 @@
-#Let's Encrypt Without Sudo
+# Let's Encrypt Without Sudo
 
 The [Let's Encrypt](https://letsencrypt.org/) initiative is a fantastic program
 that offers **free** https certificates! However, the one catch is that you need
@@ -23,7 +23,7 @@ very minimal commands for you to run to complete the requirements. There is only
 one command that needs to be run as root on your server and it is a very simple
 python https server that you can inspect for yourself before you run it.
 
-##Table of Contents
+## Table of Contents
 
 * [Donate](#donate)
 * [Prerequisites](#prerequisites)
@@ -38,19 +38,19 @@ python https server that you can inspect for yourself before you run it.
 * [Alternative: Official Let's Encrypt Client](#alternative-official-lets-encrypt-client)
 * [Feedback/Contributing](#feedbackcontributing)
 
-##Donate
+## Donate
 
 If this script is useful to you, please donate to the EFF. I don't work there,
 but they do fantastic work.
 
 [https://eff.org/donate/](https://eff.org/donate/)
 
-##Prerequisites
+## Prerequisites
 
 * openssl
 * python
 
-##How to use the signing script
+## How to use the signing script
 
 First, you need to generate an user account key for Let's Encrypt.
 This is the key that you use to register with Let's Encrypt. If you
@@ -103,7 +103,7 @@ the script and will be destroyed when the script stops. They only contain the
 protocol requests and signatures. They do NOT contain your private keys
 because this script does not have access to your private keys.
 
-###Help text
+### Help text
 ```
 user@hostname:~$ python sign_csr.py --help
 usage: sign_csr.py [-h] -p PUBLIC_KEY [-e EMAIL] csr_path
@@ -142,9 +142,9 @@ optional arguments:
 user@hostname:~$
 ```
 
-##Example use of the signing script
+## Example use of the signing script
 
-###Commands (what you do in your main terminal window)
+### Commands (what you do in your main terminal window)
 ```
 user@hostname:~$ openssl genrsa 4096 > user.key
 Generating RSA private key, 4096 bit long modulus
@@ -236,7 +236,7 @@ pr1OmFi/rUcaHw+Txbs8aBmZEBkxy9HPSfgqqlYqEd0ipGqFtqaFJEI=
 user@hostname:~$
 ```
 
-###Manual Commands (the stuff the script asked you to do in a 2nd terminal)
+### Manual Commands (the stuff the script asked you to do in a 2nd terminal)
 ```
 #first set of signed files
 user@hostname:~$ openssl dgst -sha256 -sign user.key -out register_KN2ihH.sig register_ABUO4T.json
@@ -250,7 +250,7 @@ user@hostname:~$ openssl dgst -sha256 -sign user.key -out response_ATE3Yu.sig re
 user@hostname:~$
 ```
 
-###Server Commands (the stuff the script asked you to do on your server)
+### Server Commands (the stuff the script asked you to do on your server)
 ```
 ubuntu@letsencrypt.daylightpirates.org:~$ sudo python -c "import BaseHTTPServer; \
 >     h = BaseHTTPServer.BaseHTTPRequestHandler; \
@@ -268,7 +268,7 @@ KeyboardInterrupt
 ubuntu@letsencrypt.daylightpirates.org:~$
 ```
 
-##How to use the signed https certificate
+## How to use the signed https certificate
 
 The signed https certificate that is output by this script can be used along
 with your private key to run an https server. You just securely transfer (using
@@ -303,13 +303,13 @@ server {
 }
 ```
 
-##Demo
+## Demo
 
 Here's a website that is using a certificate signed using `sign_csr.py`:
 
 [https://letsencrypt.daylightpirates.org/](https://letsencrypt.daylightpirates.org/)
 
-##How to use the revocation script
+## How to use the revocation script
 
 First, you will need to the user account key for Let's Encrypt that was used
 when the certifacate was signed.
@@ -343,7 +343,7 @@ the script and will be destroyed when the script stops. They only contain the
 protocol requests and signatures. They do NOT contain your private keys
 because this script does not have access to your private keys.
 
-###Help text
+### Help text
 ```
 user@hostname:~$ python revoke_crt.py --help
 usage: revoke_crt.py [-h] -p PUBLIC_KEY [-r PRIVATE_KEY] crt_path
@@ -375,9 +375,9 @@ optional arguments:
 user@hostname:~$
 ```
 
-##Example use of the revocation script
+## Example use of the revocation script
 
-###Commands (what you do in your main terminal window)
+### Commands (what you do in your main terminal window)
 ```
 user@hostname:~$ python revoke_crt.py --public-key user.pub domain.crt
 Reading pubkey file...
@@ -392,13 +392,13 @@ Certificate revoked!
 user@hostname:~$
 ```
 
-###Manual Command (the stuff the script asked you to do in a 2nd terminal)
+### Manual Command (the stuff the script asked you to do in a 2nd terminal)
 ```
 #signed files
 user@hostname:~$ openssl dgst -sha256 -sign user.key -out revoke_Z5Qxj3.sig revoke_TKSK9w.json
 ```
 
-##Alternative: Official Let's Encrypt Client
+## Alternative: Official Let's Encrypt Client
 
 After I released this script, Let's Encrypt added a manual authenticator to
 allow the Let's Encrypt client to not have to be run on your server. Hooray!
@@ -411,7 +411,7 @@ to see how to use the manual authenticator in the official Let's Encrypt client.
 ./letsencrypt-auto --email diafygi@gmail.com --text --authenticator manual --work-dir /tmp/work/ --config-dir /tmp/config/ --logs-dir /tmp/logs/ auth --cert-path /tmp/certs/ --chain-path /tmp/chains/ --csr ~/Desktop/domain.csr
 ```
 
-##Feedback/Contributing
+## Feedback/Contributing
 
 I'd love to receive feedback, issues, and pull requests to make this script
 better. The script itself, `sign_csr.py`, is less than 500 lines of code, so

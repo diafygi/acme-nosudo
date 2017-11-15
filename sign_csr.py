@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 import argparse, subprocess, json, os, urllib2, sys, base64, binascii, time, \
     hashlib, tempfile, re, copy, textwrap
+try:
+    from urllib.request import urlopen # Python 3
+except ImportError:
+    from urllib2 import urlopen # Python 2
 
 
 def sign_csr(pubkey, csr, email=None, file_based=False):
@@ -22,7 +26,7 @@ def sign_csr(pubkey, csr, email=None, file_based=False):
     """
     #CA = "https://acme-staging.api.letsencrypt.org"
     CA = "https://acme-v01.api.letsencrypt.org"
-    TERMS = "https://letsencrypt.org/documents/LE-SA-v1.1.1-August-1-2016.pdf"
+    DIRECTORY = json.loads(urlopen(CA + "/directory").read().decode('utf8'))
     nonce_req = urllib2.Request("{0}/directory".format(CA))
     nonce_req.get_method = lambda : 'HEAD'
 
@@ -93,7 +97,7 @@ def sign_csr(pubkey, csr, email=None, file_based=False):
     reg_raw = json.dumps({
         "resource": "new-reg",
         "contact": ["mailto:{0}".format(email)],
-        "agreement": TERMS,
+        "agreement": DIRECTORY['meta']['terms-of-service'],
     }, sort_keys=True, indent=4)
     reg_b64 = _b64(reg_raw)
     reg_protected = copy.deepcopy(header)

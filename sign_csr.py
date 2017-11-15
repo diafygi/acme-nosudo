@@ -71,7 +71,7 @@ def sign_csr(pubkey, csr, email=None, file_based=False):
     if proc.returncode != 0:
         raise IOError("Error loading {0}".format(csr))
     domains = set([])
-    common_name = re.search("Subject:.*? CN=([^\s,;/]+)", out)
+    common_name = re.search("Subject:.*? CN *= *([^\s,;/]+)", out)
     if common_name is not None:
         domains.add(common_name.group(1))
     subject_alt_names = re.search("X509v3 Subject Alternative Name: \n +([^\n]+)\n", out, re.MULTILINE|re.DOTALL)

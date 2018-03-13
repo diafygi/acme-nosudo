@@ -1,4 +1,4 @@
-# Let's Encrypt Without Sudo
+# ACME Without Sudo
 
 The [Let's Encrypt](https://letsencrypt.org/) initiative is a fantastic program
 that offers **free** https certificates! However, the one catch is that you need
@@ -12,7 +12,7 @@ have access to my private keys. I'd just like the free ssl certificate, please.
 
 So I made a script that does that. You generate your private key and certificate
 signing request (CSR) like normal, then run `sign_csr.py` with your CSR to get
-it signed. The script goes through the [ACME protocol](https://github.com/letsencrypt/acme-spec)
+it signed. The script goes through the [ACME protocol](https://github.com/ietf-wg-acme/acme/)
 with the Let's Encrypt certificate authority and outputs the signed certificate
 to stdout.
 
@@ -297,7 +297,7 @@ server {
     ssl_prefer_server_ciphers on;
 
     location / {
-        return 200 'Let\'s Encrypt Example: https://github.com/diafygi/letsencrypt-nosudo';
+        return 200 'Let\'s Encrypt Example: https://github.com/diafygi/acme-nosudo';
         add_header Content-Type text/plain;
     }
 }
@@ -404,7 +404,7 @@ After I released this script, Let's Encrypt added a manual authenticator to
 allow the Let's Encrypt client to not have to be run on your server. Hooray!
 However, the Let's Encrypt client still has access to your user account private
 keys, so please be aware of that. Anyway, check out the comment on issue
-[#5](https://github.com/diafygi/letsencrypt-nosudo/issues/5#issuecomment-117283651)
+[#5](https://github.com/diafygi/acme-nosudo/issues/5#issuecomment-117283651)
 to see how to use the manual authenticator in the official Let's Encrypt client.
 
 ```
